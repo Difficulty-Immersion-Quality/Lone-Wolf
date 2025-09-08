@@ -45,13 +45,12 @@ local function GetValidParty()
     return valid
 end
 
-
--- Apply Lone Wolf boosts, preserving HP only on first application
-local function ApplyLoneWolf(charID, preserveHP)
+-- Apply Lone Wolf boosts, preserving HP if first application
+local function ApplyLoneWolf(charID, forceApply)
     local vars = LoneWolfVars()
-    if vars[charID] then return end -- Already applied
+    if not forceApply and vars[charID] then return end -- Skip if already applied, unless forcing
 
-    -- Apply statuses
+    -- Apply statuses immediately
     Osi.ApplyStatus(charID, LONE_WOLF_STATUS, -1, 1)
     Osi.ApplyStatus(charID, GOON_LONE_WOLF_SE_BUFFS, -1, 1)
     for _, boost in ipairs(statBoosts) do
@@ -60,27 +59,30 @@ local function ApplyLoneWolf(charID, preserveHP)
         end
     end
 
-    -- Preserve HP only if requested (first application)
+    -- Preserve HP before applying Lone Wolf HP boosts
     local entityHandle = Ext.Entity.Get(charID)
     if entityHandle and entityHandle.Health then
-        if preserveHP then
-            local currentHp = entityHandle.Health.Hp
-            local subscription
-            subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
-                Ext.Timer.WaitFor(100, function()
-                    health.Health.Hp = currentHp
-                    health:Replicate("Health")
-                    if subscription then
-                        Ext.Entity.Unsubscribe(subscription)
-                    end
-                end)
-            end, entityHandle)
-        end
+        local currentHp = entityHandle.Health.Hp
+        local subscription
+
+        -- Apply Lone Wolf boosts
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
+
+        -- Subscribe to entity health changes so we can restore HP
+        subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
+            -- Wait a tick longer to ensure engine recalcs max HP
+            Ext.Timer.WaitFor(100, function()
+                health.Health.Hp = currentHp
+                health:Replicate("Health")
+                if subscription then
+                    Ext.Entity.Unsubscribe(subscription)
+                end
+            end)
+        end, entityHandle)
     else
-        -- fallback
+        -- Fallback if entity/health not found
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
@@ -135,27 +137,19 @@ local function CheckAndUpdateLoneWolfBoosts()
     end
 end
 
--- Listeners
-Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function()
-    local vars = LoneWolfVars()
 
-    -- Clear vars and rebuild from current party
-    for charID in pairs(vars) do
-        vars[charID] = nil
-    end
-
+-- Special reload-only check
+local function ForceReapplyLoneWolfOnReload()
     local valid = GetValidParty()
-    local partySize = #valid
-
     for _, charID in ipairs(valid) do
-        local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
-        if hasPassive and partySize <= PartyLimit then
-            -- Treat as first-time apply so HP is preserved
-            ApplyLoneWolf(charID, true)
+        if Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1 then
+            ApplyLoneWolf(charID, true) -- forceApply ensures HP-preserve logic runs
         end
     end
-end)
+end
 
+-- Listeners
+Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", ForceReapplyLoneWolfOnReload)
 Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
 Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
 
