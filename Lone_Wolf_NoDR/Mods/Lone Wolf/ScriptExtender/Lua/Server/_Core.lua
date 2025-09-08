@@ -38,15 +38,16 @@ local function GetValidParty()
     local players = Osi.DB_Players:Get(nil) or {}
     for _, entry in pairs(players) do
         local charID = entry[1]
-        if Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
+        if Osi.IsPlayer(charID) == 1 and Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
             table.insert(valid, charID)
         end
     end
     return valid
 end
 
+
 -- Apply Lone Wolf boosts, preserving HP only on first application
-local function ApplyLoneWolf(charID)
+local function ApplyLoneWolf(charID, preserveHP)
     local vars = LoneWolfVars()
     if vars[charID] then return end -- Already applied
 
@@ -59,25 +60,27 @@ local function ApplyLoneWolf(charID)
         end
     end
 
-    -- Preserve HP
+    -- Preserve HP only if requested (first application)
     local entityHandle = Ext.Entity.Get(charID)
     if entityHandle and entityHandle.Health then
-        local currentHp = entityHandle.Health.Hp
+        if preserveHP then
+            local currentHp = entityHandle.Health.Hp
+            local subscription
+            subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
+                Ext.Timer.WaitFor(100, function()
+                    health.Health.Hp = currentHp
+                    health:Replicate("Health")
+                    if subscription then
+                        Ext.Entity.Unsubscribe(subscription)
+                    end
+                end)
+            end, entityHandle)
+        end
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
-        local subscription
-        subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
-            Ext.Timer.WaitFor(100, function()
-                health.Health.Hp = currentHp
-                health:Replicate("Health")
-                if subscription then
-                    Ext.Entity.Unsubscribe(subscription)
-                end
-            end)
-        end, entityHandle)
     else
-        -- fallback if no health handle
+        -- fallback
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
@@ -110,7 +113,9 @@ local function CheckAndUpdateLoneWolfBoosts()
     for _, charID in ipairs(valid) do
         local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
         if hasPassive and partySize <= PartyLimit then
-            ApplyLoneWolf(charID)
+            -- If not yet boosted this session, restore HP; otherwise just apply boosts
+            local preserveHP = vars[charID] == nil
+            ApplyLoneWolf(charID, preserveHP)
         elseif vars[charID] then
             RemoveLoneWolf(charID)
         end
