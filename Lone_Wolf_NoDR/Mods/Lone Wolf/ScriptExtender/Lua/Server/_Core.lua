@@ -23,6 +23,13 @@ local function LoneWolfVars()
     return vars.LoneWolf
 end
 
+function table.find(tbl, val)
+    for _, v in ipairs(tbl) do
+        if v == val then return true end
+    end
+    return false
+end
+
 local function ApplyLoneWolf(charID)
     Osi.ApplyStatus(charID, LONE_WOLF_STATUS, -1, 1)
     Osi.ApplyStatus(charID, GOON_LONE_WOLF_SE_BUFFS, -1, 1)
@@ -72,6 +79,31 @@ local function RemoveLoneWolf(charID)
     LoneWolfVars()[charID] = nil
 end
 
+-- Full reapply on LevelGameplayStarted
+local function ForceReapplyLoneWolfBoosts()
+    local vars = LoneWolfVars()
+    local players = Osi.DB_Players:Get(nil) or {}
+    local valid = {}
+    for _, entry in pairs(players) do
+        local charID = entry[1]
+        if Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
+            table.insert(valid, charID)
+        end
+    end
+
+    local partySize = #valid
+    for _, charID in ipairs(valid) do
+        local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
+        if hasPassive and partySize <= PartyLimit then
+            -- RemoveLoneWolf(charID)       -- clear any leftovers
+            ApplyLoneWolf(charID)        -- fresh reapply
+        else
+            RemoveLoneWolf(charID)
+        end
+    end
+end
+
+-- Incremental updates (use vars to avoid stacking)
 local function CheckAndUpdateLoneWolfBoosts()
     local vars = LoneWolfVars()
     local players = Osi.DB_Players:Get(nil) or {}
@@ -82,41 +114,47 @@ local function CheckAndUpdateLoneWolfBoosts()
             table.insert(valid, charID)
         end
     end
+
     local partySize = #valid
     for _, charID in ipairs(valid) do
         local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
         if hasPassive and partySize <= PartyLimit then
-            ApplyLoneWolf(charID) -- Always reapply boosts
+            if not vars[charID] then     -- only apply if not already marked
+                ApplyLoneWolf(charID)
+            end
         else
-            if vars[charID] then RemoveLoneWolf(charID) end
+            if vars[charID] then
+                RemoveLoneWolf(charID)
+            end
         end
     end
+
     -- Clean up anyone not in party
     for charID in pairs(vars) do
-        if not table.find(valid, charID) then RemoveLoneWolf(charID) end
+        if not table.find(valid, charID) then
+            RemoveLoneWolf(charID)
+        end
     end
 end
 
-function table.find(tbl, val)
-    for _, v in ipairs(tbl) do
-        if v == val then return true end
-    end
-    return false
-end
-
+-- Listeners
 Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function()
     -- Ext.Utils.Print("Event triggered: LevelGameplayStarted")
-    CheckAndUpdateLoneWolfBoosts()
+    ForceReapplyLoneWolfBoosts()
 end)
 
-Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", function()
-    -- Ext.Utils.Print("Event triggered: CharacterJoinedParty")
-    CheckAndUpdateLoneWolfBoosts()
+Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", function(character)
+    if Osi.IsPlayer(character) == 1 then
+        -- Ext.Utils.Print("Event triggered: CharacterLeftParty")
+        CheckAndUpdateLoneWolfBoosts()
+    end
 end)
 
-Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", function()
-    -- Ext.Utils.Print("Event triggered: CharacterLeftParty")
-    CheckAndUpdateLoneWolfBoosts()
+Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", function(character)
+    if Osi.IsPlayer(character) == 1 then
+        -- Ext.Utils.Print("Event triggered: CharacterLeftParty")
+        CheckAndUpdateLoneWolfBoosts()
+    end
 end)
 
 -- Delay makes it happen after levelup is finished.
