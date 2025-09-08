@@ -18,12 +18,14 @@ local loneWolfBoosts = {
     { boost = "DamageReduction(All,Half)" },
 }
 
+-- Persistent vars for tracking boosted characters
 local function LoneWolfVars()
     local vars = Ext.Vars.GetModVariables(ModuleUUID)
     vars.LoneWolf = vars.LoneWolf or {}
     return vars.LoneWolf
 end
 
+-- Utility: find in table
 function table.find(tbl, val)
     for _, v in ipairs(tbl) do
         if v == val then return true end
@@ -31,7 +33,25 @@ function table.find(tbl, val)
     return false
 end
 
+-- Get all valid party members (not vanished)
+local function GetValidParty()
+    local valid = {}
+    local players = Osi.DB_Players:Get(nil) or {}
+    for _, entry in pairs(players) do
+        local charID = entry[1]
+        if Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
+            table.insert(valid, charID)
+        end
+    end
+    return valid
+end
+
+-- Apply Lone Wolf boosts, preserving HP only on first application
 local function ApplyLoneWolf(charID)
+    local vars = LoneWolfVars()
+    if vars[charID] then return end -- Already applied
+
+    -- Apply statuses
     Osi.ApplyStatus(charID, LONE_WOLF_STATUS, -1, 1)
     Osi.ApplyStatus(charID, GOON_LONE_WOLF_SE_BUFFS, -1, 1)
     for _, boost in ipairs(statBoosts) do
@@ -40,16 +60,15 @@ local function ApplyLoneWolf(charID)
         end
     end
 
-    -- Preserve HP before applying boosts
+    -- Preserve HP
     local entityHandle = Ext.Entity.Get(charID)
     if entityHandle and entityHandle.Health then
         local currentHp = entityHandle.Health.Hp
-        local subscription
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
+        local subscription
         subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
-            -- Wait a bit longer after the engine's update before restoring HP
             Ext.Timer.WaitFor(100, function()
                 health.Health.Hp = currentHp
                 health:Replicate("Health")
@@ -59,16 +78,18 @@ local function ApplyLoneWolf(charID)
             end)
         end, entityHandle)
     else
-        -- Fallback if entity/health not found
+        -- fallback if no health handle
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
     end
 
-    LoneWolfVars()[charID] = true
+    vars[charID] = true
 end
 
+-- Remove Lone Wolf boosts
 local function RemoveLoneWolf(charID)
+    local vars = LoneWolfVars()
     Osi.RemoveStatus(charID, LONE_WOLF_STATUS)
     Osi.RemoveStatus(charID, GOON_LONE_WOLF_SE_BUFFS)
     for _, boost in ipairs(statBoosts) do
@@ -77,60 +98,26 @@ local function RemoveLoneWolf(charID)
     for _, boost in ipairs(loneWolfBoosts) do
         Osi.RemoveBoosts(charID, boost.boost, 0, charID, charID)
     end
-    LoneWolfVars()[charID] = nil
+    vars[charID] = nil
 end
 
--- Full reapply on LevelGameplayStarted
-local function ForceReapplyLoneWolfBoosts()
+-- Incremental check/update function
+local function CheckAndUpdateLoneWolfBoosts()
     local vars = LoneWolfVars()
-    local players = Osi.DB_Players:Get(nil) or {}
-    local valid = {}
-    for _, entry in pairs(players) do
-        local charID = entry[1]
-        if Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
-            table.insert(valid, charID)
-        end
-    end
-
+    local valid = GetValidParty()
     local partySize = #valid
+
+    -- Apply to eligible characters
     for _, charID in ipairs(valid) do
         local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
         if hasPassive and partySize <= PartyLimit then
-            -- RemoveLoneWolf(charID)       -- clear any leftovers
-            ApplyLoneWolf(charID)        -- fresh reapply
-        else
+            ApplyLoneWolf(charID)
+        elseif vars[charID] then
             RemoveLoneWolf(charID)
         end
     end
-end
 
--- Incremental updates (use vars to avoid stacking)
-local function CheckAndUpdateLoneWolfBoosts()
-    local vars = LoneWolfVars()
-    local players = Osi.DB_Players:Get(nil) or {}
-    local valid = {}
-    for _, entry in pairs(players) do
-        local charID = entry[1]
-        if Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0 then
-            table.insert(valid, charID)
-        end
-    end
-
-    local partySize = #valid
-    for _, charID in ipairs(valid) do
-        local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
-        if hasPassive and partySize <= PartyLimit then
-            if not vars[charID] then     -- only apply if not already marked
-                ApplyLoneWolf(charID)
-            end
-        else
-            if vars[charID] then
-                RemoveLoneWolf(charID)
-            end
-        end
-    end
-
-    -- Clean up anyone not in party
+    -- Clean up vars for anyone no longer in the party
     for charID in pairs(vars) do
         if not table.find(valid, charID) then
             RemoveLoneWolf(charID)
@@ -139,47 +126,30 @@ local function CheckAndUpdateLoneWolfBoosts()
 end
 
 -- Listeners
-Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function()
-    -- Ext.Utils.Print("Event triggered: LevelGameplayStarted")
-    ForceReapplyLoneWolfBoosts()
-end)
+Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", CheckAndUpdateLoneWolfBoosts)
+Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
+Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
 
-Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", function(character)
-    if Osi.IsPlayer(character) == 1 then
-        -- Ext.Utils.Print("Event triggered: CharacterLeftParty")
-        CheckAndUpdateLoneWolfBoosts()
-    end
-end)
-
-Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", function(character)
-    if Osi.IsPlayer(character) == 1 then
-        -- Ext.Utils.Print("Event triggered: CharacterLeftParty")
-        CheckAndUpdateLoneWolfBoosts()
-    end
-end)
-
--- Delay makes it happen after levelup is finished.
+-- Delay update for levelups
 local function delayedUpdateLoneWolfStatus(character)
     Ext.Timer.WaitFor(500, function()
-    CheckAndUpdateLoneWolfBoosts()
+        CheckAndUpdateLoneWolfBoosts()
     end)
 end
-
 Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)
     if Osi.IsPlayer(character) == 1 then
-        -- Ext.Utils.Print("Event triggered: LeveledUp (player)")
         delayedUpdateLoneWolfStatus(character)
     end
 end)
 
+-- React to vanish status changes
 Ext.Osiris.RegisterListener("StatusApplied", 4, "after", function(object, status, cause, _)
     if status == SITOUT_VANISH_STATUS then
-        CheckAndUpdateLoneWolfBoosts(object)
+        CheckAndUpdateLoneWolfBoosts()
     end
 end)
-
 Ext.Osiris.RegisterListener("StatusRemoved", 4, "after", function(object, status, cause, _)
     if status == SITOUT_VANISH_STATUS then
-        CheckAndUpdateLoneWolfBoosts(object)
+        CheckAndUpdateLoneWolfBoosts()
     end
 end)
