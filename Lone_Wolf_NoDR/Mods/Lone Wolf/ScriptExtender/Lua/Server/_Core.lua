@@ -112,10 +112,16 @@ local function CheckAndUpdateLoneWolfBoosts()
     -- Apply to eligible characters
     for _, charID in ipairs(valid) do
         local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
+        local alreadyBoosted = vars[charID] or Osi.HasActiveStatus(charID, LONE_WOLF_STATUS) == 1
+
         if hasPassive and partySize <= PartyLimit then
-            -- If not yet boosted this session, restore HP; otherwise just apply boosts
-            local preserveHP = vars[charID] == nil
-            ApplyLoneWolf(charID, preserveHP)
+            -- If not yet boosted this session AND status not present, preserve HP; otherwise just mark vars
+            if not alreadyBoosted then
+                ApplyLoneWolf(charID, true)
+            else
+                -- Ensure vars tracks them so incremental updates work
+                vars[charID] = true
+            end
         elseif vars[charID] then
             RemoveLoneWolf(charID)
         end
@@ -130,7 +136,26 @@ local function CheckAndUpdateLoneWolfBoosts()
 end
 
 -- Listeners
-Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", CheckAndUpdateLoneWolfBoosts)
+Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function()
+    local vars = LoneWolfVars()
+
+    -- Clear vars and rebuild from current party
+    for charID in pairs(vars) do
+        vars[charID] = nil
+    end
+
+    local valid = GetValidParty()
+    local partySize = #valid
+
+    for _, charID in ipairs(valid) do
+        local hasPassive = Osi.HasPassive(charID, LONE_WOLF_PASSIVE) == 1
+        if hasPassive and partySize <= PartyLimit then
+            -- Treat as first-time apply so HP is preserved
+            ApplyLoneWolf(charID, true)
+        end
+    end
+end)
+
 Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
 Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", CheckAndUpdateLoneWolfBoosts)
 
