@@ -49,7 +49,9 @@ end
 -- Apply Lone Wolf boosts, preserving HP if first application
 local function ApplyLoneWolf(charID, forceApply)
     local vars = LoneWolfVars()
-    if not forceApply and vars[charID] then return end -- Skip if already applied
+    if not forceApply and vars[charID] then
+        return
+    end
 
     -- Apply statuses
     Osi.ApplyStatus(charID, LONE_WOLF_STATUS, -1, 1)
@@ -70,9 +72,12 @@ local function ApplyLoneWolf(charID, forceApply)
         ---@diagnostic disable-next-line: param-type-mismatch
         local sub
         sub = Ext.Entity.Subscribe("Health", function(health, _, _)
-            health.Health.Hp = currentHp
-            health:Replicate("Health")
-            Ext.Entity.Unsubscribe(sub) -- unsubscribe immediately after handling
+            -- Restore HP after the engine applies its changes
+            Ext.Timer.WaitFor(50, function()
+                health.Health.Hp = currentHp
+                health:Replicate("Health")
+                Ext.Entity.Unsubscribe(sub) -- unsubscribe immediately
+            end)
         end, entityHandle)
     end
 
