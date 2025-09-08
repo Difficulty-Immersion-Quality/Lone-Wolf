@@ -49,9 +49,9 @@ end
 -- Apply Lone Wolf boosts, preserving HP if first application
 local function ApplyLoneWolf(charID, forceApply)
     local vars = LoneWolfVars()
-    if not forceApply and vars[charID] then return end -- Skip if already applied, unless forcing
+    if not forceApply and vars[charID] then return end -- Skip if already applied
 
-    -- Apply statuses immediately
+    -- Apply statuses
     Osi.ApplyStatus(charID, LONE_WOLF_STATUS, -1, 1)
     Osi.ApplyStatus(charID, GOON_LONE_WOLF_SE_BUFFS, -1, 1)
     for _, boost in ipairs(statBoosts) do
@@ -60,33 +60,20 @@ local function ApplyLoneWolf(charID, forceApply)
         end
     end
 
-    -- Preserve HP before applying Lone Wolf HP boosts
-    local entityHandle = Ext.Entity.Get(charID)
+    local entityHandle = Ext.Entity.UuidToHandle(charID)
     if entityHandle and entityHandle.Health then
         local currentHp = entityHandle.Health.Hp
-        local subscription
-
-        -- Apply Lone Wolf boosts
         for _, boost in ipairs(loneWolfBoosts) do
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
 
-        -- Subscribe to entity health changes so we can restore HP
-        subscription = Ext.Entity.Subscribe("Health", function(health, _, _)
-            -- Wait a tick longer to ensure engine recalcs max HP
-            Ext.Timer.WaitFor(100, function()
-                health.Health.Hp = currentHp
-                health:Replicate("Health")
-                if subscription then
-                    Ext.Entity.Unsubscribe(subscription)
-                end
-            end)
+        ---@diagnostic disable-next-line: param-type-mismatch
+        local sub
+        sub = Ext.Entity.Subscribe("Health", function(health, _, _)
+            health.Health.Hp = currentHp
+            health:Replicate("Health")
+            Ext.Entity.Unsubscribe(sub) -- unsubscribe immediately after handling
         end, entityHandle)
-    else
-        -- Fallback if entity/health not found
-        for _, boost in ipairs(loneWolfBoosts) do
-            Osi.AddBoosts(charID, boost.boost, charID, charID)
-        end
     end
 
     vars[charID] = true
