@@ -69,8 +69,8 @@ local function ApplyLoneWolf(charID, forceApply)
             Osi.AddBoosts(charID, boost.boost, charID, charID)
         end
 
-        ---@diagnostic disable-next-line: param-type-mismatch
         local sub
+        ---@diagnostic disable-next-line: param-type-mismatch
         sub = Ext.Entity.Subscribe("Health", function(health, _, _)
             -- Restore HP after the engine applies its changes
             Ext.Timer.WaitFor(50, function()
