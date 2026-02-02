@@ -1,4 +1,3 @@
---- @type RegisterVariableOptions
 local opts = {
     Server = true,
     Client = false,
@@ -10,5 +9,6 @@ local opts = {
     SyncOnWrite = false,
     DontCache = false
 }
+---@diagnostic disable-next-line: redundant-parameter
 Ext.Vars.RegisterModVariable(ModuleUUID, "LoneWolf", opts)
 Ext.Require("Server/_Core.lua")
