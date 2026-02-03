@@ -1,6 +1,4 @@
--- TODO: Fix bugs.
--- two main bugs: loading new level, e.g. going to act 2 doubles hp - pretty sure I fixed it. We force applied the lone wolf shit on level load
--- Other bug is sit this one out not working. gonna need to test. Maybe add debug prints? :shrug: we'll see later
+-- TODO:
 -- Add mcm menu
 -- Make DR optional, make party size configurable, enable toggle and optionally just grant it even if you don't have the feat? maybe more idk?
 
@@ -8,7 +6,6 @@ local LONE_WOLF_STATUS = "GOON_LONE_WOLF_STATUS"
 local LONE_WOLF_PASSIVE = "Goon_Lone_Wolf_Passive_Dummy"
 local GOON_LONE_WOLF_HPMAX_STATUS = "GOON_LONE_WOLF_HPMAX_STATUS"
 local GOON_LONE_WOLF_DR_STATUS = "GOON_LONE_WOLF_DR_STATUS"
-local PartyLimit = 2
 local SITOUT_VANISH_STATUS = "SITOUT_ONCOMBATSTART_APPLIER_TECHNICAL"
 local statBoosts = {
     { passive = "Goon_Lone_Wolf_Strength", status = "GOON_LONE_WOLF_STRENGTH_STATUS" },
@@ -19,12 +16,16 @@ local statBoosts = {
     { passive = "Goon_Lone_Wolf_Charisma", status = "GOON_LONE_WOLF_CHARISMA_STATUS" },
 }
 
+local Config = LoneWolf.Config
+local config = Config.Read()
+
 local function TrimGuid(charID)
     if not charID then return nil end
     return string.sub(charID, -36)
 end
 
 local function IsValidPartyMember(charID)
+    if not charID then return false end
     return Osi.IsPlayer(charID) == 1
         and Osi.IsSummon(charID) == 0
         and Osi.HasActiveStatus(charID, SITOUT_VANISH_STATUS) == 0
@@ -60,14 +61,34 @@ local function ApplyStatusPreserveHp(charID, status)
 end
 
 local function ApplyLoneWolf(charID)
-    ApplyStatusIfMissing(charID, LONE_WOLF_STATUS)
-    ApplyStatusPreserveHp(charID, GOON_LONE_WOLF_HPMAX_STATUS)
-    ApplyStatusIfMissing(charID, GOON_LONE_WOLF_DR_STATUS)
+    if config.enableCoreBuffs then
+        ApplyStatusIfMissing(charID, LONE_WOLF_STATUS)
+    else
+        Osi.RemoveStatus(charID, LONE_WOLF_STATUS)
+    end
 
-    for _, boost in ipairs(statBoosts) do
-        if Osi.HasPassive(charID, boost.passive) == 1 then
-            ApplyStatusIfMissing(charID, boost.status)
-        else
+    if config.enableHpMax then
+        ApplyStatusPreserveHp(charID, GOON_LONE_WOLF_HPMAX_STATUS)
+    else
+        Osi.RemoveStatus(charID, GOON_LONE_WOLF_HPMAX_STATUS)
+    end
+
+    if config.enableDamageReduction then
+        ApplyStatusIfMissing(charID, GOON_LONE_WOLF_DR_STATUS)
+    else
+        Osi.RemoveStatus(charID, GOON_LONE_WOLF_DR_STATUS)
+    end
+
+    if config.enableStatBoosts then
+        for _, boost in ipairs(statBoosts) do
+            if Osi.HasPassive(charID, boost.passive) == 1 then
+                ApplyStatusIfMissing(charID, boost.status)
+            else
+                Osi.RemoveStatus(charID, boost.status)
+            end
+        end
+    else
+        for _, boost in ipairs(statBoosts) do
             Osi.RemoveStatus(charID, boost.status)
         end
     end
@@ -83,6 +104,21 @@ local function RemoveLoneWolf(charID)
 end
 
 local function UpdateLoneWolf()
+    if not Osi or not Osi.DB_Players then
+        return
+    end
+
+    if not config.enabled then
+        local players = Osi.DB_Players:Get(nil) or {}
+        for _, entry in pairs(players) do
+            local guid = TrimGuid(entry[1])
+            if guid then
+                RemoveLoneWolf(guid)
+            end
+        end
+        return
+    end
+
     local players = Osi.DB_Players:Get(nil) or {}
     local validParty = {}
 
@@ -99,8 +135,11 @@ local function UpdateLoneWolf()
         local guid = TrimGuid(entry[1])
         if guid then
             local eligible = IsValidPartyMember(guid)
-                and Osi.HasPassive(guid, LONE_WOLF_PASSIVE) == 1
-                and partySize <= PartyLimit
+                and ((tonumber(config.partyLimit) or 0) <= 0 or partySize <= config.partyLimit)
+
+            if eligible and config.requirePassive then
+                eligible = (Osi.HasPassive(guid, LONE_WOLF_PASSIVE) == 1)
+            end
 
             if eligible then
                 ApplyLoneWolf(guid)
@@ -111,7 +150,10 @@ local function UpdateLoneWolf()
     end
 end
 
-Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", UpdateLoneWolf)
+Ext.Osiris.RegisterListener("LevelGameplayStarted", 2, "after", function()
+    config = Config.Read()
+    UpdateLoneWolf()
+end)
 Ext.Osiris.RegisterListener("CharacterJoinedParty", 1, "after", UpdateLoneWolf)
 Ext.Osiris.RegisterListener("CharacterLeftParty", 1, "after", UpdateLoneWolf)
 
@@ -121,6 +163,7 @@ local function delayedUpdateLoneWolfStatus(character)
     end)
 end
 Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)
+    _P("leveledup now lol")
     if Osi.IsPlayer(character) == 1 then
         delayedUpdateLoneWolfStatus(character)
     end
@@ -135,6 +178,14 @@ end)
 
 Ext.Osiris.RegisterListener("StatusRemoved", 4, "after", function(object, status, cause, _)
     if status == SITOUT_VANISH_STATUS then
+        UpdateLoneWolf()
+    end
+end)
+
+Ext.RegisterNetListener("LoneWolf_ConfigChanged", function(channel, payload)
+    local ok, parsed = pcall(Ext.Json.Parse, payload or "")
+    if ok then
+        config = Config.ApplyDefaults(parsed)
         UpdateLoneWolf()
     end
 end)

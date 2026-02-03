@@ -1,0 +1,14 @@
+{
+    "SchemaVersion": 1,
+    "Optional": true,
+    "ModName": "Lone Wolf",
+    "Tabs": [
+        {
+            "TabId": "Lone Wolf",
+            "TabName": "Lone Wolf",
+            "Handles": {
+                "NameHandle": "hace1e8d1b8eb489888aa180e20e85321049e"
+            }
+        }
+    ]
+}

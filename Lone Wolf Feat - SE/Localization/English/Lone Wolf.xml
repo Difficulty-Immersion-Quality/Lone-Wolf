@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <contentList>
     <content contentuid="h9725de20g112fg4e3eg9401gdf291a8cbf75" version="1">Lone Wolf</content>
 
@@ -29,6 +29,26 @@
     <content contentuid="h5b028bfagd71dg4c43g9ac3ga96282c009da" version="1">Tough Skin</content>
     <content contentuid="h086dd109gcbdbg4d36gbf9cg6e402b7d1e92" version="1">You take halved damage from all sources.</content>
 
+    <content contentuid="ha5bb2328028646e1b235dad94f2a074d972d" version="1">Lone Wolf: Sturdy Insides</content>
+    <content contentuid="h79a7791e193f495ea248ff133ef484a32a82" version="1">Hit point maximum increased by [1].</content>
+    <content contentuid="hf6b5d8a8235b4318809a9345db4f0bd06g6a" version="1">Lone Wolf: Tough Skin</content>
+    <content contentuid="h9fc14e28bc9a4cbfb84bf641e5a4219c01f1" version="1">You take [1] less damage from all sources.</content>
+
     <content contentuid="hf2024379gbaffg4747gb6fagc45fdfacea86" version="1">Lone Wolf SE Status</content>
     <content contentuid="h99203d8cg9e07g4731g98cbg7c65e0e17cff" version="1">Deez Stanuts</content>
+    <content contentuid="hace1e8d1b8eb489888aa180e20e85321049e" version="1">Lone Wolf</content>
+    <content contentuid="h1943ecd841964045b8cbdad06feafbc0803g" version="1">Configure Lone Wolf SE. Changes apply immediately.</content>
+    <content contentuid="ha797eca6400e423cb3f3c66c0a1eacfaac63" version="1">General</content>
+    <content contentuid="hf53e3929e59a4f85af841aa82668318c43e4" version="1">Effects</content>
+    <content contentuid="hb4650452f82641f8b829ab01ea12072d6e57" version="1">Enable Mod</content>
+    <content contentuid="h3287ab42ce0845f9b56512d60db6544b3a13" version="1">Party Size Limit</content>
+    <content contentuid="h9a27580149974da68bdb93f6c05295fceee2" version="1">Apply Lone Wolf buffs when party size is at or below this value. Set to 0 to disable the party size limit.</content>
+    <content contentuid="hb169d72a9a414bc39ac8dcec4bd6741a5f8g" version="1">Require Lone Wolf feat</content>
+    <content contentuid="h2a42644f63a6470ca4e18c13435645310885" version="1">If disabled, all players benefit when party size is low enough.</content>
+    <content contentuid="h2329b286163c440ebed00334dc08aef8fe66" version="1">Core buffs (actions + carry)</content>
+    <content contentuid="h580865f081ca482fad5fc0bba28562dfc673" version="1">Max HP bonus</content>
+    <content contentuid="hd8c93ee0185b436681efaa216c1947bf43cg" version="1">Damage Reduction</content>
+    <content contentuid="hbfec879989874c7a8b3bceb5b70186a34c6d" version="1">Ability boosts from selected passives</content>
+    <content contentuid="haea556b9a28b46c182f4bebc560d717014b3" version="1">Reset to Defaults</content>
+    <content contentuid="hb1b273af9f9b428a952a25eefbe318153fc8" version="1">[Lone Wolf] BG3MCM not found. Edit LoneWolfConfig.json instead.</content>
 </contentList>
