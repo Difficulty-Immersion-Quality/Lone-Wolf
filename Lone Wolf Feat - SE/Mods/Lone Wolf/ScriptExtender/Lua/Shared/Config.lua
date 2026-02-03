@@ -13,6 +13,14 @@ Config.default = {
     enableHpMax = true,
     enableDamageReduction = true,
     enableStatBoosts = true,
+    hpPercent = 30,
+    drPercent = 50,
+    drType = "Half",
+    abilityBonus = 4,
+    actionPoints = 1,
+    bonusActionPoints = 1,
+    reactionPoints = 1,
+    carryMultiplier = 2.0,
 }
 
 function Config.DeepCopy(original)
@@ -37,6 +45,14 @@ function Config.ApplyDefaults(cfg)
     if cfg.enableHpMax ~= nil then data.enableHpMax = cfg.enableHpMax end
     if cfg.enableDamageReduction ~= nil then data.enableDamageReduction = cfg.enableDamageReduction end
     if cfg.enableStatBoosts ~= nil then data.enableStatBoosts = cfg.enableStatBoosts end
+    if cfg.hpPercent ~= nil then data.hpPercent = cfg.hpPercent end
+    if cfg.drPercent ~= nil then data.drPercent = cfg.drPercent end
+    if cfg.drType ~= nil then data.drType = cfg.drType end
+    if cfg.abilityBonus ~= nil then data.abilityBonus = cfg.abilityBonus end
+    if cfg.actionPoints ~= nil then data.actionPoints = cfg.actionPoints end
+    if cfg.bonusActionPoints ~= nil then data.bonusActionPoints = cfg.bonusActionPoints end
+    if cfg.reactionPoints ~= nil then data.reactionPoints = cfg.reactionPoints end
+    if cfg.carryMultiplier ~= nil then data.carryMultiplier = cfg.carryMultiplier end
 
     return data
 end
