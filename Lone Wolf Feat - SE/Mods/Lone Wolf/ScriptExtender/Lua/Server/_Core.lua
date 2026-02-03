@@ -1,5 +1,5 @@
 ---@diagnostic disable: missing-parameter
-
+--TODO: add panic attack toggle from ice mage
 local LONE_WOLF_STATUS = "GOON_LONE_WOLF_STATUS"
 local LONE_WOLF_PASSIVE = "Goon_Lone_Wolf_Passive_Dummy"
 local GOON_LONE_WOLF_HPMAX_STATUS = "GOON_LONE_WOLF_HPMAX_STATUS"
