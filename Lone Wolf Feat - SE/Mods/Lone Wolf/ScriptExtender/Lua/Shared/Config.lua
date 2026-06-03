@@ -34,25 +34,11 @@ end
 
 function Config.ApplyDefaults(cfg)
     local data = Config.DeepCopy(Config.default)
-    if type(cfg) ~= "table" then
-        return data
+    for key in pairs(Config.default) do
+        if cfg[key] ~= nil then
+            data[key] = cfg[key]
+        end
     end
-
-    if cfg.enabled ~= nil then data.enabled = cfg.enabled end
-    if cfg.partyLimit ~= nil then data.partyLimit = cfg.partyLimit end
-    if cfg.requirePassive ~= nil then data.requirePassive = cfg.requirePassive end
-    if cfg.enableCoreBuffs ~= nil then data.enableCoreBuffs = cfg.enableCoreBuffs end
-    if cfg.enableHpMax ~= nil then data.enableHpMax = cfg.enableHpMax end
-    if cfg.enableDamageReduction ~= nil then data.enableDamageReduction = cfg.enableDamageReduction end
-    if cfg.enableStatBoosts ~= nil then data.enableStatBoosts = cfg.enableStatBoosts end
-    if cfg.hpPercent ~= nil then data.hpPercent = cfg.hpPercent end
-    if cfg.drPercent ~= nil then data.drPercent = cfg.drPercent end
-    if cfg.drType ~= nil then data.drType = cfg.drType end
-    if cfg.abilityBonus ~= nil then data.abilityBonus = cfg.abilityBonus end
-    if cfg.actionPoints ~= nil then data.actionPoints = cfg.actionPoints end
-    if cfg.bonusActionPoints ~= nil then data.bonusActionPoints = cfg.bonusActionPoints end
-    if cfg.reactionPoints ~= nil then data.reactionPoints = cfg.reactionPoints end
-    if cfg.carryMultiplier ~= nil then data.carryMultiplier = cfg.carryMultiplier end
 
     return data
 end
@@ -65,12 +51,8 @@ function Config.Read()
         return fresh
     end
 
-    local ok, parsed = pcall(Ext.Json.Parse, file)
-    if ok then
-        return Config.ApplyDefaults(parsed)
-    end
-
-    return Config.DeepCopy(Config.default)
+    local parsed = Ext.Json.Parse(file)
+    return Config.ApplyDefaults(parsed)
 end
 
 function Config.Save(cfg)

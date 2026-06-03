@@ -9,6 +9,27 @@ local overridesSectionUI = nil
 local syncToken = 0
 local DR_TYPE_OPTIONS = { "Half", "Flat", "Threshold" }
 local ABILITY_OPTIONS = { "None", "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" }
+local DEFAULT_DEBOUNCE_MS = 200
+
+local CHECKBOX_WIDGETS = {
+    { widget = "enableMod",       setting = "enabled" },
+    { widget = "requirePassive",  setting = "requirePassive" },
+    { widget = "coreBuffs",       setting = "enableCoreBuffs" },
+    { widget = "hpMax",           setting = "enableHpMax" },
+    { widget = "damageReduction", setting = "enableDamageReduction" },
+    { widget = "statBoosts",      setting = "enableStatBoosts" },
+}
+
+local SLIDER_WIDGETS = {
+    { widget = "partyLimit",        setting = "partyLimit" },
+    { widget = "hpPercent",         setting = "hpPercent" },
+    { widget = "drPercent",         setting = "drPercent" },
+    { widget = "abilityBonus",      setting = "abilityBonus" },
+    { widget = "actionPoints",      setting = "actionPoints" },
+    { widget = "bonusActionPoints", setting = "bonusActionPoints" },
+    { widget = "reactionPoints",    setting = "reactionPoints" },
+    { widget = "carryMultiplier",   setting = "carryMultiplier" },
+}
 
 local function SyncToServer(debounceMs)
     local doSync = function()
@@ -37,20 +58,17 @@ local function GetOptionIndex(options, value)
     return 0
 end
 
-local function GetSliderValue(slider, fallback)
-    if not slider then return fallback end
+local function GetSliderValue(slider)
     local value = slider.Value
     if type(value) == "table" then
-        return value[1] ~= nil and value[1] or fallback
+        return value[1]
     end
     if type(value) == "number" then
         return value
     end
-    return fallback
 end
 
 local function SetSliderValue(slider, value)
-    if not slider then return end
     if type(slider.Value) == "table" then
         slider.Value[1] = value
     else
@@ -92,13 +110,11 @@ local function GetPartyMembers()
 end
 
 local function ClearOverridesChildren()
-    if not (overridesSectionUI and overridesSectionUI.Children) then return end
+    if not overridesSectionUI or not overridesSectionUI.Children then return end
+
     local toDestroy = {}
     for _, child in ipairs(overridesSectionUI.Children) do
-        local ok, hasHeaders = pcall(function() return child.Headers end)
-        if not (ok and hasHeaders == true) then
-            table.insert(toDestroy, child)
-        end
+        table.insert(toDestroy, child)
     end
     for _, child in ipairs(toDestroy) do child:Destroy() end
 end
@@ -106,7 +122,7 @@ end
 local function SavePlayerOverride(abilityOverrides, key, firstCombo, secondCombo)
     local first = ABILITY_OPTIONS[firstCombo.SelectedIndex + 1]
     local second = ABILITY_OPTIONS[secondCombo.SelectedIndex + 1]
-    if (first == "None" or first == nil) and (second == "None" or second == nil) then
+    if first == "None" and second == "None" then
         abilityOverrides[key] = nil
     else
         abilityOverrides[key] = { first = first, second = second }
@@ -118,23 +134,25 @@ local function SavePlayerOverride(abilityOverrides, key, firstCombo, secondCombo
 end
 
 local function RebuildOverridesSection()
-    if not overridesSectionUI then return end
+    local ui = overridesSectionUI
+    if not ui then return end
+
     ClearOverridesChildren()
 
-    local note = overridesSectionUI:AddText(Translator:translate("AbilityOverridesNote"))
+    local note = ui:AddText(Translator:translate("AbilityOverridesNote"))
     note.TextWrapPos = 0
 
-    local refreshBtn = overridesSectionUI:AddButton(Translator:translate("Button_RefreshParty"))
+    local refreshBtn = ui:AddButton(Translator:translate("Button_RefreshParty"))
     refreshBtn.OnClick = function() RebuildOverridesSection() end
 
     local players = GetPartyMembers()
-    if not players or #players == 0 then
-        overridesSectionUI:AddText(Translator:translate("AbilityOverridesEmpty"))
+    if #players == 0 then
+        ui:AddText(Translator:translate("AbilityOverridesEmpty"))
         return
     end
 
     local abilityOverrides = GetAbilityOverrides()
-    local tableObj = overridesSectionUI:AddTable("LoneWolfAbilityOverrides", 4)
+    local tableObj = ui:AddTable("LoneWolfAbilityOverrides", 4)
     tableObj.Borders = true
     tableObj.RowBg = true
     tableObj:AddColumn(Translator:translate("OverridesHeader_Name"), "WidthStretch", 1.0)
@@ -151,7 +169,7 @@ local function RebuildOverridesSection()
 
     for _, player in ipairs(players) do
         local row = tableObj:AddRow()
-        row:AddCell():AddText(player.name or "Unknown")
+        row:AddCell():AddText(player.name)
 
         local key = TrimGuid(player.uuid) or player.uuid
         local playerOverride = abilityOverrides[key] or abilityOverrides[player.uuid] or {}
@@ -182,21 +200,13 @@ local function RebuildOverridesSection()
 end
 
 local function RefreshUI()
-    if widgets.enableMod then widgets.enableMod.Checked = settings.enabled end
-    if widgets.partyLimit then SetSliderValue(widgets.partyLimit, settings.partyLimit) end
-    if widgets.requirePassive then widgets.requirePassive.Checked = settings.requirePassive end
-    if widgets.coreBuffs then widgets.coreBuffs.Checked = settings.enableCoreBuffs end
-    if widgets.hpMax then widgets.hpMax.Checked = settings.enableHpMax end
-    if widgets.damageReduction then widgets.damageReduction.Checked = settings.enableDamageReduction end
-    if widgets.statBoosts then widgets.statBoosts.Checked = settings.enableStatBoosts end
-    if widgets.hpPercent then SetSliderValue(widgets.hpPercent, settings.hpPercent) end
-    if widgets.drPercent then SetSliderValue(widgets.drPercent, settings.drPercent) end
-    if widgets.abilityBonus then SetSliderValue(widgets.abilityBonus, settings.abilityBonus) end
-    if widgets.drType then widgets.drType.SelectedIndex = GetOptionIndex(DR_TYPE_OPTIONS, settings.drType) end
-    if widgets.actionPoints then SetSliderValue(widgets.actionPoints, settings.actionPoints) end
-    if widgets.bonusActionPoints then SetSliderValue(widgets.bonusActionPoints, settings.bonusActionPoints) end
-    if widgets.reactionPoints then SetSliderValue(widgets.reactionPoints, settings.reactionPoints) end
-    if widgets.carryMultiplier then SetSliderValue(widgets.carryMultiplier, settings.carryMultiplier) end
+    for _, binding in ipairs(CHECKBOX_WIDGETS) do
+        widgets[binding.widget].Checked = settings[binding.setting]
+    end
+    for _, binding in ipairs(SLIDER_WIDGETS) do
+        SetSliderValue(widgets[binding.widget], settings[binding.setting])
+    end
+    widgets.drType.SelectedIndex = GetOptionIndex(DR_TYPE_OPTIONS, settings.drType)
     RebuildOverridesSection()
 end
 
@@ -219,15 +229,15 @@ local function SetupMCM()
         widgets.enableMod = generalHeader:AddCheckbox(Translator:translate("Checkbox_EnableMod"), settings.enabled)
         widgets.enableMod.OnChange = function(chk)
             settings.enabled = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.partyLimit = generalHeader:AddSliderInt(Translator:translate("Slider_PartyLimit"), settings.partyLimit, 0,
             10)
         widgets.partyLimit:Tooltip():AddText(Translator:translate("Tooltip_PartyLimit"))
         widgets.partyLimit.OnChange = function(slider)
-            settings.partyLimit = GetSliderValue(slider, settings.partyLimit)
-            SyncToServer(200)
+            settings.partyLimit = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.requirePassive = generalHeader:AddCheckbox(Translator:translate("Checkbox_RequirePassive"),
@@ -235,7 +245,7 @@ local function SetupMCM()
         widgets.requirePassive:Tooltip():AddText(Translator:translate("Tooltip_RequirePassive"))
         widgets.requirePassive.OnChange = function(chk)
             settings.requirePassive = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
             RebuildOverridesSection()
         end
 
@@ -246,35 +256,35 @@ local function SetupMCM()
             settings.enableCoreBuffs)
         widgets.coreBuffs.OnChange = function(chk)
             settings.enableCoreBuffs = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.hpMax = effectsHeader:AddCheckbox(Translator:translate("Checkbox_HpMax"), settings.enableHpMax)
         widgets.hpMax.OnChange = function(chk)
             settings.enableHpMax = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.damageReduction = effectsHeader:AddCheckbox(Translator:translate("Checkbox_DamageReduction"),
             settings.enableDamageReduction)
         widgets.damageReduction.OnChange = function(chk)
             settings.enableDamageReduction = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.statBoosts = effectsHeader:AddCheckbox(Translator:translate("Checkbox_StatBoosts"),
             settings.enableStatBoosts)
         widgets.statBoosts.OnChange = function(chk)
             settings.enableStatBoosts = chk.Checked
-            SyncToServer(200)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.hpPercent = effectsHeader:AddSliderInt(Translator:translate("Slider_HpPercent"), settings.hpPercent, 0,
             100)
         widgets.hpPercent:Tooltip():AddText(Translator:translate("Tooltip_HpPercent"))
         widgets.hpPercent.OnChange = function(slider)
-            settings.hpPercent = GetSliderValue(slider, settings.hpPercent)
-            SyncToServer(200)
+            settings.hpPercent = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.drType = effectsHeader:AddCombo(Translator:translate("Dropdown_DrType"))
@@ -290,16 +300,16 @@ local function SetupMCM()
             100)
         widgets.drPercent:Tooltip():AddText(Translator:translate("Tooltip_DrPercent"))
         widgets.drPercent.OnChange = function(slider)
-            settings.drPercent = GetSliderValue(slider, settings.drPercent)
-            SyncToServer(200)
+            settings.drPercent = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.abilityBonus = effectsHeader:AddSliderInt(Translator:translate("Slider_AbilityBonus"),
             settings.abilityBonus, 0, 10)
         widgets.abilityBonus:Tooltip():AddText(Translator:translate("Tooltip_AbilityBonus"))
         widgets.abilityBonus.OnChange = function(slider)
-            settings.abilityBonus = GetSliderValue(slider, settings.abilityBonus)
-            SyncToServer(200)
+            settings.abilityBonus = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         local coreHeader = effectsHeader:AddCollapsingHeader(Translator:translate("Header_CoreBuffs"))
@@ -309,32 +319,32 @@ local function SetupMCM()
             .actionPoints, 0, 5)
         widgets.actionPoints:Tooltip():AddText(Translator:translate("Tooltip_ActionPoints"))
         widgets.actionPoints.OnChange = function(slider)
-            settings.actionPoints = GetSliderValue(slider, settings.actionPoints)
-            SyncToServer(200)
+            settings.actionPoints = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.bonusActionPoints = coreHeader:AddSliderInt(Translator:translate("Slider_BonusActionPoints"),
             settings.bonusActionPoints, 0, 5)
         widgets.bonusActionPoints:Tooltip():AddText(Translator:translate("Tooltip_BonusActionPoints"))
         widgets.bonusActionPoints.OnChange = function(slider)
-            settings.bonusActionPoints = GetSliderValue(slider, settings.bonusActionPoints)
-            SyncToServer(200)
+            settings.bonusActionPoints = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.reactionPoints = coreHeader:AddSliderInt(Translator:translate("Slider_ReactionPoints"),
             settings.reactionPoints, 0, 5)
         widgets.reactionPoints:Tooltip():AddText(Translator:translate("Tooltip_ReactionPoints"))
         widgets.reactionPoints.OnChange = function(slider)
-            settings.reactionPoints = GetSliderValue(slider, settings.reactionPoints)
-            SyncToServer(200)
+            settings.reactionPoints = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         widgets.carryMultiplier = coreHeader:AddSlider(Translator:translate("Slider_CarryMultiplier"),
             settings.carryMultiplier, 0.0, 10.0)
         widgets.carryMultiplier:Tooltip():AddText(Translator:translate("Tooltip_CarryMultiplier"))
         widgets.carryMultiplier.OnChange = function(slider)
-            settings.carryMultiplier = GetSliderValue(slider, settings.carryMultiplier)
-            SyncToServer(200)
+            settings.carryMultiplier = GetSliderValue(slider)
+            SyncToServer(DEFAULT_DEBOUNCE_MS)
         end
 
         tabHeader:AddSeparator()

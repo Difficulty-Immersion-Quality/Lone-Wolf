@@ -20,14 +20,6 @@ local statBoosts = {
     { ability = "Wisdom",       passive = "Goon_Lone_Wolf_Wisdom",       status = "GOON_LONE_WOLF_WISDOM_STATUS" },
     { ability = "Charisma",     passive = "Goon_Lone_Wolf_Charisma",     status = "GOON_LONE_WOLF_CHARISMA_STATUS" },
 }
-local abilityStatus = {
-    Strength = "GOON_LONE_WOLF_STRENGTH_STATUS",
-    Dexterity = "GOON_LONE_WOLF_DEXTERITY_STATUS",
-    Constitution = "GOON_LONE_WOLF_CONSTITUTION_STATUS",
-    Intelligence = "GOON_LONE_WOLF_INTELLIGENCE_STATUS",
-    Wisdom = "GOON_LONE_WOLF_WISDOM_STATUS",
-    Charisma = "GOON_LONE_WOLF_CHARISMA_STATUS",
-}
 
 local Config = LoneWolf.Config
 local config = Config.Read()
@@ -66,11 +58,11 @@ local function ApplyStatusPreserveHp(charID, status, force)
 
     local currentHp = entityHandle.Health.Hp
     local sub
-    ---@diagnostic disable-next-line: param-type-mismatch
     sub = Ext.Entity.Subscribe("Health", function(health, _, _)
         health.Health.Hp = currentHp
         health:Replicate("Health")
-        Ext.Entity.Unsubscribe(assert(sub)) -- unsubscribe immediately
+        ---@diagnostic disable-next-line: param-type-mismatch
+        Ext.Entity.Unsubscribe(sub)
     end, entityHandle)
 
     Osi.ApplyStatus(charID, status, -1, 1)
@@ -84,12 +76,8 @@ local function ApplyOverrideStatuses(charID, force)
     local vars = Ext.Vars.GetModVariables(ModuleUUID)
     vars.LoneWolfData = vars.LoneWolfData or {}
     vars.LoneWolfData.AbilityOverrides = vars.LoneWolfData.AbilityOverrides or {}
-    local data = vars.LoneWolfData
-    if not data or not data.AbilityOverrides then
-        return
-    end
 
-    local override = data.AbilityOverrides[TrimGuid(charID)] or data.AbilityOverrides[charID]
+    local override = vars.LoneWolfData.AbilityOverrides[TrimGuid(charID)]
     if not override then
         return
     end
@@ -97,11 +85,10 @@ local function ApplyOverrideStatuses(charID, force)
     local first = override.first or override[1]
     local second = override.second or override[2]
 
-    if abilityStatus[first] then
-        ApplyStatusIfMissing(charID, abilityStatus[first], force)
-    end
-    if abilityStatus[second] and second ~= first then
-        ApplyStatusIfMissing(charID, abilityStatus[second], force)
+    for _, boost in ipairs(statBoosts) do
+        if boost.ability == first or boost.ability == second then
+            ApplyStatusIfMissing(charID, boost.status, force)
+        end
     end
 end
 
