@@ -35,7 +35,7 @@ local function SyncToServer(debounceMs)
     local doSync = function()
         settings = Config.ApplyDefaults(settings)
         Config.Save(settings)
-        Ext.Net.PostMessageToServer("LoneWolf_ConfigChanged", Ext.Json.Stringify(settings))
+        LoneWolf.ConfigChannel:SendToServer({ settings = settings })
     end
 
     if debounceMs and debounceMs > 0 then

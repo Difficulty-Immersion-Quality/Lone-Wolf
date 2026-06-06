@@ -302,7 +302,7 @@ Ext.Osiris.RegisterListener("LeveledUp", 1, "after", function(character)
 end)
 
 local pendingUpdateToken = 0
-Ext.RegisterNetListener("LoneWolf_ConfigChanged", function()
+LoneWolf.ConfigChannel:SetHandler(function()
     pendingUpdateToken = pendingUpdateToken + 1
     local token = pendingUpdateToken
     Ext.Timer.WaitFor(50, function()
