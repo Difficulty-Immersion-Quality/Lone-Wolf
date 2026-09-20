@@ -12,7 +12,7 @@ data "StackPriority" "20"
 data "StackType" "Ignore"
 data "StatusPropertyFlags" "DisableOverhead;DisableCombatlog;DisablePortraitIndicator;IgnoreResting;ApplyToDead"
 data "StatusGroups" ""
-data "Boosts" "ActionResource(BonusActionPoint,1,0);ActionResource(ActionPoint,1,0);ActionResource(ReactionActionPoint,1,0);CarryCapacityMultiplier(2.0)"
+data "Boosts" "ActionResource(BonusActionPoint,2,0);ActionResource(ActionPoint,1,0);ActionResource(ReactionActionPoint,1,0);CarryCapacityMultiplier(2.0)"
 
 // ==================================== Ability increase statuses ====================================
 

@@ -17,7 +17,7 @@ Config.default = {
     drType = "Half",
     abilityBonus = 4,
     actionPoints = 1,
-    bonusActionPoints = 1,
+    bonusActionPoints = 2,
     reactionPoints = 1,
     carryMultiplier = 2.0,
 }
