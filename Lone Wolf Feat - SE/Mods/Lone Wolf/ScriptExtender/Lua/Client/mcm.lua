@@ -35,7 +35,7 @@ local function SyncToServer(debounceMs)
     local token = syncToken
     local doSync = function()
         Config.Save(settings)
-        LoneWolf.ConfigChannel:SendToServer({ settings = settings })
+        LoneWolf.ConfigChannel:SendToServer({})
     end
 
     if debounceMs and debounceMs > 0 then
