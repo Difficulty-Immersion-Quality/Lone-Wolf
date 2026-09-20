@@ -12,6 +12,7 @@ Config.default = {
     enableHpMax = true,
     enableDamageReduction = true,
     enableStatBoosts = true,
+    excludeSpellRestriction = false,
     hpPercent = 30,
     drPercent = 50,
     drType = "Half",

@@ -1,5 +1,7 @@
 ---@diagnostic disable: missing-parameter
 --TODO: add panic attack toggle from ice mage
+local SPELL_RESTRICT_MOD = "da0ff8c8-4028-4ceb-b918-ca530cd31900"
+local SPELL_EXCLUSION_STATUS = "GOON_LONE_WOLF_SPELL_EXCLUSION"
 local LONE_WOLF_STATUS = "GOON_LONE_WOLF_STATUS"
 local LONE_WOLF_PASSIVE = "Goon_Lone_Wolf_Passive_Dummy"
 local GOON_LONE_WOLF_HPMAX_STATUS = "GOON_LONE_WOLF_HPMAX_STATUS"
@@ -45,7 +47,20 @@ local function ApplyStatusIfMissing(charID, status, force)
     Osi.ApplyStatus(charID, status, -1, 1)
 end
 
+local function RemoveSpellExclusion(charID)
+    Osi.RemoveStatus(charID, SPELL_EXCLUSION_STATUS)
+    if Osi.HasPassive(charID, "NZX_SpellRestrict") == 0 then
+        Osi.AddPassive(charID, "NZX_SpellRestrict")
+    end
+end
+
 local function ApplyLoneWolf(charID, force, override)
+    if settings.excludeSpellRestriction and Ext.Mod.GetMod(SPELL_RESTRICT_MOD) then
+        ApplyStatusIfMissing(charID, SPELL_EXCLUSION_STATUS)
+    else
+        RemoveSpellExclusion(charID)
+    end
+
     if settings.enableCoreBuffs then
         ApplyStatusIfMissing(charID, LONE_WOLF_STATUS, force)
     else
@@ -82,6 +97,7 @@ local function ApplyLoneWolf(charID, force, override)
 end
 
 local function RemoveLoneWolf(charID)
+    RemoveSpellExclusion(charID)
     Osi.RemoveStatus(charID, LONE_WOLF_STATUS)
     Osi.RemoveStatus(charID, GOON_LONE_WOLF_HPMAX_STATUS)
     Osi.RemoveStatus(charID, GOON_LONE_WOLF_DR_STATUS)

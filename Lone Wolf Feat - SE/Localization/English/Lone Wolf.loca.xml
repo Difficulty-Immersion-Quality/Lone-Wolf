@@ -79,4 +79,9 @@
     <content contentuid="h2377f8ab5a4f494fbae516af149a60964ffb" version="1">You take half damage from all sources.</content>
     <content contentuid="hfd2328037f8842f2a62ac858311c93ec27e3" version="1">If damage is below [1], it is reduced to 1.</content>
     <content contentuid="hab3004c9a5644ff19452d243af26f907fcf6" version="1">Only the host can change Lone Wolf settings.</content>
+    <content contentuid="h6ea9589bb91f4803af91d40eb879812b7dfe" version="1">Ignore one levelled spell per turn limit</content>
+    <content contentuid="hb1fbf0c31c0244ccbb59cc26920694cb5g7d" version="1">Exempt characters from One Levelled Spell Per Turn.</content>
+    <content contentuid="hbd853de14e664a54845b19d570c4688bb869" version="1">One Levelled Spell Per Turn is not loaded. Enable that mod to use this setting.</content>
+    <content contentuid="h9913675e527b4deabe26a5c61c55750a69eb" version="1">Lone Wolf: Unrestricted Spellcasting</content>
+    <content contentuid="h6a8a42682d9645eeaa5e5339327a823ac42c" version="1">You are exempt from the one levelled spell per turn limit.</content>
 </contentList>

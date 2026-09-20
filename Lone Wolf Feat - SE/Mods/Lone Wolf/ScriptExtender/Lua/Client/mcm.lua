@@ -9,8 +9,10 @@ local syncToken = 0
 local DR_TYPE_OPTIONS = { "Half", "Flat", "Threshold" }
 local ABILITY_OPTIONS = { "None", "Strength", "Dexterity", "Constitution", "Intelligence", "Wisdom", "Charisma" }
 local SLIDER_DEBOUNCE_MS = 200
+local SPELL_RESTRICT_MOD = "da0ff8c8-4028-4ceb-b918-ca530cd31900"
 
 local CHECKBOX_WIDGETS = {
+    { widget = "spellExclusion",  setting = "excludeSpellRestriction" },
     { widget = "enableMod",       setting = "enabled" },
     { widget = "requirePassive",  setting = "requirePassive" },
     { widget = "coreBuffs",       setting = "enableCoreBuffs" },
@@ -222,6 +224,16 @@ MCM.InsertModMenuTab(Translator:translate("TabName"), function(tabHeader)
         RebuildOverridesSection()
     end
 
+    local spellRestrictLoaded = Ext.Mod.GetMod(SPELL_RESTRICT_MOD) ~= nil
+    widgets.spellExclusion = generalHeader:AddCheckbox(Translator:translate("Checkbox_SpellExclusion"),
+        settings.excludeSpellRestriction)
+    widgets.spellExclusion:Tooltip():AddText(Translator:translate(
+        spellRestrictLoaded and "Tooltip_SpellExclusion" or "Tooltip_SpellRestrictMissing"))
+    widgets.spellExclusion.OnChange = function(chk)
+        settings.excludeSpellRestriction = chk.Checked
+        SyncToServer()
+    end
+
     local effectsHeader = content:AddCollapsingHeader(Translator:translate("Header_Effects"))
     effectsHeader.DefaultOpen = true
 
@@ -330,6 +342,10 @@ MCM.InsertModMenuTab(Translator:translate("TabName"), function(tabHeader)
     resetButton.Disabled = not isHost
     for _, widget in pairs(widgets) do
         widget.Disabled = not isHost
+    end
+    widgets.spellExclusion.Disabled = not isHost or not spellRestrictLoaded
+    if not spellRestrictLoaded then
+        widgets.spellExclusion:SetStyle("Alpha", 0.4)
     end
     resetButton.OnClick = function()
         settings = Config.ApplyDefaults({})

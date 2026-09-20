@@ -22,6 +22,9 @@ function Translator:translate(key)
 end
 
 Translator:RegisterHandles({
+    ["Checkbox_SpellExclusion"] = "h6ea9589bb91f4803af91d40eb879812b7dfe",
+    ["Tooltip_SpellExclusion"] = "hb1fbf0c31c0244ccbb59cc26920694cb5g7d",
+    ["Tooltip_SpellRestrictMissing"] = "hbd853de14e664a54845b19d570c4688bb869",
     ["TabName"] = "hace1e8d1b8eb489888aa180e20e85321049e",
     ["Info_Intro"] = "h1943ecd841964045b8cbdad06feafbc0803g",
     ["Header_General"] = "ha797eca6400e423cb3f3c66c0a1eacfaac63",
