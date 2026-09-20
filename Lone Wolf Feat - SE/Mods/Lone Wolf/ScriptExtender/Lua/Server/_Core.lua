@@ -22,7 +22,7 @@ local statBoosts = {
 }
 
 local Config = LoneWolf.Config
-local config = Config.Read()
+local settings = Config.Read()
 
 local function ApplyStatusIfMissing(charID, status, force)
     if Osi.HasActiveStatus(charID, status) == 1 then
@@ -46,19 +46,19 @@ local function ApplyStatusIfMissing(charID, status, force)
 end
 
 local function ApplyLoneWolf(charID, force, override)
-    if config.enableCoreBuffs then
+    if settings.enableCoreBuffs then
         ApplyStatusIfMissing(charID, LONE_WOLF_STATUS, force)
     else
         Osi.RemoveStatus(charID, LONE_WOLF_STATUS)
     end
 
-    if config.enableHpMax then
+    if settings.enableHpMax then
         ApplyStatusIfMissing(charID, GOON_LONE_WOLF_HPMAX_STATUS, force)
     else
         Osi.RemoveStatus(charID, GOON_LONE_WOLF_HPMAX_STATUS)
     end
 
-    if config.enableDamageReduction then
+    if settings.enableDamageReduction then
         ApplyStatusIfMissing(charID, GOON_LONE_WOLF_DR_STATUS, force)
     else
         Osi.RemoveStatus(charID, GOON_LONE_WOLF_DR_STATUS)
@@ -68,12 +68,12 @@ local function ApplyLoneWolf(charID, force, override)
     local second = override and override.second
     for _, boost in ipairs(statBoosts) do
         local selected
-        if config.requirePassive then
+        if settings.requirePassive then
             selected = Osi.HasPassive(charID, boost.passive) == 1
         else
             selected = boost.ability == first or boost.ability == second
         end
-        if config.enableStatBoosts and selected then
+        if settings.enableStatBoosts and selected then
             ApplyStatusIfMissing(charID, boost.status, force)
         else
             Osi.RemoveStatus(charID, boost.status)
@@ -91,7 +91,7 @@ local function RemoveLoneWolf(charID)
 end
 
 local function UpdateLoneWolf(force)
-    config = Config.Read()
+    settings = Config.Read()
     local vars = Ext.Vars.GetModVariables(ModuleUUID)
     vars.LoneWolfData = vars.LoneWolfData or {}
     vars.LoneWolfData.AbilityOverrides = vars.LoneWolfData.AbilityOverrides or {}
@@ -99,22 +99,22 @@ local function UpdateLoneWolf(force)
     if force then
         ---@type StatusData
         local hpStatus = Ext.Stats.Get(GOON_LONE_WOLF_HPMAX_STATUS)
-        hpStatus.Boosts = "IncreaseMaxHP(" .. config.hpPercent .. "%)"
-        hpStatus.DescriptionParams = tostring(config.hpPercent) .. "%"
+        hpStatus.Boosts = "IncreaseMaxHP(" .. settings.hpPercent .. "%)"
+        hpStatus.DescriptionParams = tostring(settings.hpPercent) .. "%"
         hpStatus:Sync()
 
         local drBoost = DR_BOOST_HALF
         local drParam = "50%"
         local drDescStatus = DR_DESC_HALF
         local drDescPassive = DR_DESC_HALF
-        if config.drType == "Flat" then
-            drBoost = DR_BOOST_FLAT_PREFIX .. tostring(config.drPercent) .. ")"
-            drParam = tostring(config.drPercent)
+        if settings.drType == "Flat" then
+            drBoost = DR_BOOST_FLAT_PREFIX .. tostring(settings.drPercent) .. ")"
+            drParam = tostring(settings.drPercent)
             drDescStatus = DR_DESC_FLAT_STATUS
             drDescPassive = DR_DESC_FLAT_PASSIVE
-        elseif config.drType == "Threshold" then
-            drBoost = DR_BOOST_THRESHOLD_PREFIX .. tostring(config.drPercent) .. ")"
-            drParam = tostring(config.drPercent)
+        elseif settings.drType == "Threshold" then
+            drBoost = DR_BOOST_THRESHOLD_PREFIX .. tostring(settings.drPercent) .. ")"
+            drParam = tostring(settings.drPercent)
             drDescStatus = DR_DESC_THRESHOLD
             drDescPassive = DR_DESC_THRESHOLD
         end
@@ -128,18 +128,18 @@ local function UpdateLoneWolf(force)
         for _, boost in ipairs(statBoosts) do
             ---@type StatusData
             local status = Ext.Stats.Get(boost.status)
-            status.Boosts = "Ability(" .. boost.ability .. "," .. config.abilityBonus ..
+            status.Boosts = "Ability(" .. boost.ability .. "," .. settings.abilityBonus ..
                 ");ProficiencyBonus(SavingThrow," .. boost.ability .. ")"
-            status.DescriptionParams = tostring(config.abilityBonus)
+            status.DescriptionParams = tostring(settings.abilityBonus)
             status:Sync()
             ---@type PassiveData
             local passive = Ext.Stats.Get(boost.passive)
-            passive.DescriptionParams = tostring(config.abilityBonus)
+            passive.DescriptionParams = tostring(settings.abilityBonus)
             passive:Sync()
         end
         ---@type PassiveData
         local extraHpPassive = Ext.Stats.Get("Goon_Lone_Wolf_Extra_HP")
-        extraHpPassive.DescriptionParams = tostring(config.hpPercent) .. "%"
+        extraHpPassive.DescriptionParams = tostring(settings.hpPercent) .. "%"
         extraHpPassive:Sync()
         ---@type PassiveData
         local extraDrPassive = Ext.Stats.Get("Goon_Lone_Wolf_Extra_DR")
@@ -148,26 +148,26 @@ local function UpdateLoneWolf(force)
         extraDrPassive:Sync()
         ---@type PassiveData
         local mainPassive = Ext.Stats.Get(LONE_WOLF_PASSIVE)
-        mainPassive.DescriptionParams = tostring(config.hpPercent) .. "%;" .. tostring(config.abilityBonus) ..
+        mainPassive.DescriptionParams = tostring(settings.hpPercent) .. "%;" .. tostring(settings.abilityBonus) ..
             ";" .. drParam
         mainPassive:Sync()
         ---@type StatusData
         local mainStatus = Ext.Stats.Get(LONE_WOLF_STATUS)
         local coreBoosts = {}
-        if config.actionPoints > 0 then
-            table.insert(coreBoosts, "ActionResource(ActionPoint," .. config.actionPoints .. ",0)")
+        if settings.actionPoints > 0 then
+            table.insert(coreBoosts, "ActionResource(ActionPoint," .. settings.actionPoints .. ",0)")
         end
-        if config.bonusActionPoints > 0 then
-            table.insert(coreBoosts, "ActionResource(BonusActionPoint," .. config.bonusActionPoints .. ",0)")
+        if settings.bonusActionPoints > 0 then
+            table.insert(coreBoosts, "ActionResource(BonusActionPoint," .. settings.bonusActionPoints .. ",0)")
         end
-        if config.reactionPoints > 0 then
-            table.insert(coreBoosts, "ActionResource(ReactionActionPoint," .. config.reactionPoints .. ",0)")
+        if settings.reactionPoints > 0 then
+            table.insert(coreBoosts, "ActionResource(ReactionActionPoint," .. settings.reactionPoints .. ",0)")
         end
-        if config.carryMultiplier > 0 then
-            table.insert(coreBoosts, "CarryCapacityMultiplier(" .. tostring(config.carryMultiplier) .. ")")
+        if settings.carryMultiplier > 0 then
+            table.insert(coreBoosts, "CarryCapacityMultiplier(" .. tostring(settings.carryMultiplier) .. ")")
         end
         mainStatus.Boosts = table.concat(coreBoosts, ";")
-        mainStatus.DescriptionParams = tostring(config.hpPercent) .. "%;" .. tostring(config.abilityBonus) ..
+        mainStatus.DescriptionParams = tostring(settings.hpPercent) .. "%;" .. tostring(settings.abilityBonus) ..
             ";" .. drParam
         mainStatus:Sync()
     end
@@ -185,9 +185,9 @@ local function UpdateLoneWolf(force)
 
     local partySize = #validPlayers
     for _, guid in ipairs(validPlayers) do
-        local eligible = config.enabled
-            and (config.partyLimit <= 0 or partySize <= config.partyLimit)
-            and (not config.requirePassive or Osi.HasPassive(guid, LONE_WOLF_PASSIVE) == 1)
+        local eligible = settings.enabled
+            and (settings.partyLimit <= 0 or partySize <= settings.partyLimit)
+            and (not settings.requirePassive or Osi.HasPassive(guid, LONE_WOLF_PASSIVE) == 1)
         if eligible then
             ApplyLoneWolf(guid, force, vars.LoneWolfData.AbilityOverrides[guid])
         else
