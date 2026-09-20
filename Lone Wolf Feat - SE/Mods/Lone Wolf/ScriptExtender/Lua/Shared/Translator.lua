@@ -61,6 +61,7 @@ Translator:RegisterHandles({
     ["OverridesButton_Clear"] = "h8c41ac3762b04b7ea7be6426ee3cab8d4841",
     ["Button_RefreshParty"] = "h484f10d9c40c4a2d8d4c47d7f4a0f7b6b1d9",
     ["Button_Reset"] = "haea556b9a28b46c182f4bebc560d717014b3",
+    ["Warn_HostOnly"] = "hab3004c9a5644ff19452d243af26f907fcf6",
     ["Warn_MCMNotFound"] = "hb1b273af9f9b428a952a25eefbe318153fc8",
 })
 

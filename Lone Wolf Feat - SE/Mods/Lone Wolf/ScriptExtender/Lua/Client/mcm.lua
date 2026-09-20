@@ -107,6 +107,7 @@ local function RebuildOverridesSection()
     note.TextWrapPos = 0
 
     local refreshBtn = ui:AddButton(Translator:translate("Button_RefreshParty"))
+    refreshBtn.Disabled = not Ext.Net.IsHost()
     refreshBtn.OnClick = function() RebuildOverridesSection() end
 
     local players = GetPartyMembers()
@@ -143,18 +144,18 @@ local function RebuildOverridesSection()
         local firstCombo = row:AddCell():AddCombo("##LW_First_" .. player.uuid)
         firstCombo.Options = ABILITY_OPTIONS
         firstCombo.SelectedIndex = GetOptionIndex(ABILITY_OPTIONS, firstVal)
-        firstCombo.Disabled = settings.requirePassive
+        firstCombo.Disabled = settings.requirePassive or not Ext.Net.IsHost()
 
         local secondCombo = row:AddCell():AddCombo("##LW_Second_" .. player.uuid)
         secondCombo.Options = ABILITY_OPTIONS
         secondCombo.SelectedIndex = GetOptionIndex(ABILITY_OPTIONS, secondVal)
-        secondCombo.Disabled = settings.requirePassive
+        secondCombo.Disabled = settings.requirePassive or not Ext.Net.IsHost()
 
         firstCombo.OnChange = function() SavePlayerOverride(abilityOverrides, key, firstCombo, secondCombo) end
         secondCombo.OnChange = function() SavePlayerOverride(abilityOverrides, key, firstCombo, secondCombo) end
 
         local clearBtn = row:AddCell():AddButton(Translator:translate("OverridesButton_Clear"))
-        clearBtn.Disabled = settings.requirePassive
+        clearBtn.Disabled = settings.requirePassive or not Ext.Net.IsHost()
         clearBtn.OnClick = function()
             firstCombo.SelectedIndex = 0
             secondCombo.SelectedIndex = 0
@@ -180,10 +181,22 @@ if not Mods.BG3MCM then
 end
 
 MCM.InsertModMenuTab(Translator:translate("TabName"), function(tabHeader)
-    tabHeader:AddText(Translator:translate("Info_Intro"))
-    tabHeader:AddSeparator()
+    local isHost = Ext.Net.IsHost()
+    if not isHost then
+        local warning = tabHeader:AddText(Translator:translate("Warn_HostOnly"))
+        warning.TextWrapPos = 0
+        warning.Font = "Large"
+        warning:SetColor("Text", { 1.0, 0.25, 0.25, 1.0 })
+    end
+    local content = tabHeader:AddGroup("LoneWolfSettings")
+    if not isHost then
+        content:SetStyle("Alpha", 0.4)
+        content:SetColor("Text", { 0.65, 0.65, 0.65, 1.0 })
+    end
+    content:AddText(Translator:translate("Info_Intro"))
+    content:AddSeparator()
 
-    local generalHeader = tabHeader:AddCollapsingHeader(Translator:translate("Header_General"))
+    local generalHeader = content:AddCollapsingHeader(Translator:translate("Header_General"))
     generalHeader.DefaultOpen = true
 
     widgets.enableMod = generalHeader:AddCheckbox(Translator:translate("Checkbox_EnableMod"), settings.enabled)
@@ -209,7 +222,7 @@ MCM.InsertModMenuTab(Translator:translate("TabName"), function(tabHeader)
         RebuildOverridesSection()
     end
 
-    local effectsHeader = tabHeader:AddCollapsingHeader(Translator:translate("Header_Effects"))
+    local effectsHeader = content:AddCollapsingHeader(Translator:translate("Header_Effects"))
     effectsHeader.DefaultOpen = true
 
     widgets.coreBuffs = effectsHeader:AddCheckbox(Translator:translate("Checkbox_CoreBuffs"),
@@ -307,13 +320,17 @@ MCM.InsertModMenuTab(Translator:translate("TabName"), function(tabHeader)
         SyncToServer(SLIDER_DEBOUNCE_MS)
     end
 
-    tabHeader:AddSeparator()
-    overridesSectionUI = tabHeader:AddCollapsingHeader(Translator:translate("Header_AbilityOverrides"))
+    content:AddSeparator()
+    overridesSectionUI = content:AddCollapsingHeader(Translator:translate("Header_AbilityOverrides"))
     overridesSectionUI.DefaultOpen = false
     RebuildOverridesSection()
 
-    tabHeader:AddSeparator()
-    local resetButton = tabHeader:AddButton(Translator:translate("Button_Reset"))
+    content:AddSeparator()
+    local resetButton = content:AddButton(Translator:translate("Button_Reset"))
+    resetButton.Disabled = not isHost
+    for _, widget in pairs(widgets) do
+        widget.Disabled = not isHost
+    end
     resetButton.OnClick = function()
         settings = Config.ApplyDefaults({})
         SyncToServer()
